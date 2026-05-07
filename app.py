@@ -1,8 +1,12 @@
 import streamlit as st
 import plotly.express as px
+import pandas as pd
 from excel_processor import process_excel
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+    page_title="Constraint Dashboard",
+    layout="wide"
+)
 
 st.title("Constraint Operations Dashboard")
 
@@ -15,23 +19,30 @@ if uploaded_file:
 
     df = process_excel(uploaded_file)
 
-    st.subheader("Constraint Related Operations")
+    st.subheader("Constraint & Before Constraint Operations")
 
     st.dataframe(
         df,
         use_container_width=True
     )
 
+    # KPI
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("IDT", int(df["IDT"].sum()))
+    c2.metric("NWT", int(df["NWT"].sum()))
+    c3.metric("RWT", int(df["RWT"].sum()))
+    c4.metric("TDT", int(df["TDT"].sum()))
+
     # TDT VISUAL
-    st.subheader("TDT by Line")
+    st.subheader("TDT Analysis")
 
     fig1 = px.bar(
         df,
-        x="LINE",
+        x="Operation",
         y="TDT",
-        color="ROW_TYPE",
-        text="Operation",
-        barmode="group"
+        color="TDT",
+        text="TDT"
     )
 
     st.plotly_chart(
@@ -39,16 +50,15 @@ if uploaded_file:
         use_container_width=True
     )
 
-    # EFFICIENCY VISUAL
-    st.subheader("Efficiency Comparison")
+    # EFF VISUAL
+    st.subheader("Efficiency Analysis")
 
     fig2 = px.bar(
         df,
-        x="LINE",
+        x="Operation",
         y="Eff",
-        color="ROW_TYPE",
-        text="Operation",
-        barmode="group"
+        color="Eff",
+        text="Eff"
     )
 
     st.plotly_chart(
@@ -56,18 +66,22 @@ if uploaded_file:
         use_container_width=True
     )
 
-    # LOSS TIME VISUAL
-    st.subheader("Loss Time Analysis")
+    # LOSS VISUAL
+    st.subheader("Loss Time Distribution")
 
-    loss_df = df[
-        ["IDT", "NWT", "RWT", "TDT"]
-    ].sum().reset_index()
-
-    loss_df.columns = ["Loss Type", "Value"]
+    loss_df = pd.DataFrame({
+        "Loss": ["IDT", "NWT", "RWT", "TDT"],
+        "Value": [
+            df["IDT"].sum(),
+            df["NWT"].sum(),
+            df["RWT"].sum(),
+            df["TDT"].sum()
+        ]
+    })
 
     fig3 = px.pie(
         loss_df,
-        names="Loss Type",
+        names="Loss",
         values="Value"
     )
 
