@@ -4,7 +4,7 @@ def process_excel(uploaded_file):
 
     filename = uploaded_file.name.lower()
 
-    # SUPPORT XLS + XLSX
+    # READ XLSX
     if filename.endswith(".xlsx"):
 
         df = pd.read_excel(
@@ -13,6 +13,7 @@ def process_excel(uploaded_file):
             engine="openpyxl"
         )
 
+    # READ XLS
     else:
 
         df = pd.read_excel(
@@ -31,32 +32,33 @@ def process_excel(uploaded_file):
 
         if col in count:
             count[col] += 1
-            col = f\"{col}_{count[col]}\"
+            new_col = f"{col}_{count[col]}"
         else:
             count[col] = 0
+            new_col = col
 
-        cols.append(col)
+        cols.append(new_col)
 
     df.columns = cols
 
     # RENAME IMPORTANT COLUMNS
     rename_map = {
-        \"Operator.1\": \"Operator\",
-        \"Total.3\": \"IDT\",
-        \"Total.4\": \"NWT\",
-        \"Total.5\": \"RWT\",
-        \"Total.6\": \"TDT\"
+        "Operator.1": "Operator",
+        "Total.3": "IDT",
+        "Total.4": "NWT",
+        "Total.5": "RWT",
+        "Total.6": "TDT"
     }
 
     df = df.rename(columns=rename_map)
 
-    # NUMERIC CONVERSION
+    # CONVERT NUMERIC COLUMNS
     numeric_cols = [
-        \"IDT\",
-        \"NWT\",
-        \"RWT\",
-        \"TDT\",
-        \"Eff\"
+        "IDT",
+        "NWT",
+        "RWT",
+        "TDT",
+        "Eff"
     ]
 
     for col in numeric_cols:
@@ -65,13 +67,13 @@ def process_excel(uploaded_file):
 
             df[col] = pd.to_numeric(
                 df[col],
-                errors=\"coerce\"
+                errors="coerce"
             ).fillna(0)
 
     # FILTER IMPORTANT ROWS
     filtered_df = df[
-        (df[\"Eff\"] <= 10) |
-        (df[\"NWT\"] >= 350)
+        (df["Eff"] <= 10) |
+        (df["NWT"] >= 350)
     ]
 
     return filtered_df
