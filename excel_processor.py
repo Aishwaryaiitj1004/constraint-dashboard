@@ -1,16 +1,62 @@
 import pandas as pd
-        "Total.6": "TDT"
+
+def process_excel(uploaded_file):
+
+    filename = uploaded_file.name.lower()
+
+    # SUPPORT XLS + XLSX
+    if filename.endswith(".xlsx"):
+
+        df = pd.read_excel(
+            uploaded_file,
+            header=4,
+            engine="openpyxl"
+        )
+
+    else:
+
+        df = pd.read_excel(
+            uploaded_file,
+            header=4,
+            engine="xlrd"
+        )
+
+    # MAKE COLUMN NAMES UNIQUE
+    cols = []
+    count = {}
+
+    for col in df.columns:
+
+        col = str(col).strip()
+
+        if col in count:
+            count[col] += 1
+            col = f\"{col}_{count[col]}\"
+        else:
+            count[col] = 0
+
+        cols.append(col)
+
+    df.columns = cols
+
+    # RENAME IMPORTANT COLUMNS
+    rename_map = {
+        \"Operator.1\": \"Operator\",
+        \"Total.3\": \"IDT\",
+        \"Total.4\": \"NWT\",
+        \"Total.5\": \"RWT\",
+        \"Total.6\": \"TDT\"
     }
 
     df = df.rename(columns=rename_map)
 
-    # CONVERT NUMERIC COLUMNS
+    # NUMERIC CONVERSION
     numeric_cols = [
-        "IDT",
-        "NWT",
-        "RWT",
-        "TDT",
-        "Eff"
+        \"IDT\",
+        \"NWT\",
+        \"RWT\",
+        \"TDT\",
+        \"Eff\"
     ]
 
     for col in numeric_cols:
@@ -19,49 +65,13 @@ import pandas as pd
 
             df[col] = pd.to_numeric(
                 df[col],
-                errors="coerce"
+                errors=\"coerce\"
             ).fillna(0)
 
-    # IMPORTANT BUSINESS LOGIC
-    # ONLY KEEP:
-    # 1. RED ROWS -> CONSTRAINT OPERATIONS
-    # 2. YELLOW ROWS -> BEFORE CONSTRAINT OPERATIONS
-    #
-    # Since pandas cannot directly read Excel colors
-    # from xls reliably on Streamlit Cloud,
-    # we approximate the same logic using:
-    #
-    # LOW EFFICIENCY = CONSTRAINT
-    # HIGH NWT = BEFORE CONSTRAINT
-
+    # FILTER IMPORTANT ROWS
     filtered_df = df[
-        (df["Eff"] <= 10) |
-        (df["NWT"] >= 350)
-    ].copy()
-
-    # REMOVE EMPTY OPERATIONS
-    filtered_df = filtered_df[
-        filtered_df["Operation"].notna()
+        (df[\"Eff\"] <= 10) |
+        (df[\"NWT\"] >= 350)
     ]
-
-    # KEEP ONLY IMPORTANT COLUMNS
-    required_cols = [
-        "Operation",
-        "Operator",
-        "SAM",
-        "Target",
-        "IDT",
-        "NWT",
-        "RWT",
-        "TDT",
-        "Eff"
-    ]
-
-    final_cols = [
-        c for c in required_cols
-        if c in filtered_df.columns
-    ]
-
-    filtered_df = filtered_df[final_cols]
 
     return filtered_df
