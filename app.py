@@ -1,16 +1,14 @@
 import streamlit as st
+import pandas as pd
 import plotly.express as px
 from excel_processor import process_excel
 
-st.set_page_config(
-    page_title="Constraint Dashboard",
-    layout="wide"
-)
+st.set_page_config(layout="wide")
 
-st.title("Constraint Operations Dashboard")
+st.title("Constraint Dashboard")
 
 uploaded_file = st.file_uploader(
-    "Upload Excel File",
+    "Upload Excel",
     type=["xls", "xlsx"]
 )
 
@@ -18,45 +16,72 @@ if uploaded_file:
 
     df = process_excel(uploaded_file)
 
-    st.subheader("Data Preview")
-    st.dataframe(df)
+    # Rename columns
+    df = df.rename(columns={
+        "Total.3": "IDT",
+        "Total.4": "NWT",
+        "Total.5": "RWT",
+        "Total.6": "TDT"
+    })
 
-    # KPIs
-    col1, col2, col3, col4 = st.columns(4)
+    # Convert to numbers
+    for col in ["IDT", "NWT", "RWT", "TDT"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(
+                df[col],
+                errors="coerce"
+            ).fillna(0)
 
-    if "IDT" in df.columns:
-        col1.metric("Total IDT", round(df["IDT"].sum(), 2))
+    # RED - Constraint Operations
+    st.subheader("🔴 Constraint Operations")
 
-    if "NWT" in df.columns:
-        col2.metric("Total NWT", round(df["NWT"].sum(), 2))
+    fig1 = px.bar(
+        df,
+        x="Operation",
+        y="TDT",
+        color="TDT"
+    )
 
-    if "RWT" in df.columns:
-        col3.metric("Total RWT", round(df["RWT"].sum(), 2))
+    st.plotly_chart(
+        fig1,
+        use_container_width=True
+    )
 
-    if "TDT" in df.columns:
-        col4.metric("Total TDT", round(df["TDT"].sum(), 2))
+    # YELLOW - Before Constraint
+    st.subheader("🟡 Before Constraint Operations")
 
-    # Loss Time Chart
-    loss_cols = ["IDT", "NWT", "RWT", "TDT"]
+    fig2 = px.bar(
+        df,
+        x="Operation",
+        y="NWT",
+        color="NWT"
+    )
 
-    available_cols = [c for c in loss_cols if c in df.columns]
+    st.plotly_chart(
+        fig2,
+        use_container_width=True
+    )
 
-    if available_cols:
+    # LOSS VISUALS
+    st.subheader("⚫ Loss Time Analysis")
 
-        chart_df = df[available_cols].sum().reset_index()
+    loss_df = pd.DataFrame({
+        "Loss": ["IDT", "NWT", "RWT", "TDT"],
+        "Value": [
+            df["IDT"].sum(),
+            df["NWT"].sum(),
+            df["RWT"].sum(),
+            df["TDT"].sum()
+        ]
+    })
 
-        chart_df.columns = ["Loss Type", "Time"]
+    fig3 = px.pie(
+        loss_df,
+        names="Loss",
+        values="Value"
+    )
 
-        fig = px.bar(
-            chart_df,
-            x="Loss Type",
-            y="Time",
-            color="Loss Type",
-            title="Loss Time Analysis"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    # Table
-    st.subheader("Processed Data")
-    st.dataframe(df)
+    st.plotly_chart(
+        fig3,
+        use_container_width=True
+    )
