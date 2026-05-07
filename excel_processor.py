@@ -1,33 +1,10 @@
 import pandas as pd
-
-def process_excel(uploaded_file):
-
-    # Read Excel (.xls supported)
-    df = pd.read_excel(
-        uploaded_file,
-        header=4,
-        engine="xlrd"
-    )
-
-    # Clean columns
-    df.columns = (
-        df.columns
-        .astype(str)
-        .str.strip()
-    )
-
-    # Rename columns
-    rename_map = {
-        "Operator.1": "Operator",
-        "Total.3": "IDT",
-        "Total.4": "NWT",
-        "Total.5": "RWT",
         "Total.6": "TDT"
     }
 
     df = df.rename(columns=rename_map)
 
-    # Numeric conversion
+    # CONVERT NUMERIC COLUMNS
     numeric_cols = [
         "IDT",
         "NWT",
@@ -45,10 +22,46 @@ def process_excel(uploaded_file):
                 errors="coerce"
             ).fillna(0)
 
-    # ONLY RED + YELLOW TYPE LOGIC
+    # IMPORTANT BUSINESS LOGIC
+    # ONLY KEEP:
+    # 1. RED ROWS -> CONSTRAINT OPERATIONS
+    # 2. YELLOW ROWS -> BEFORE CONSTRAINT OPERATIONS
+    #
+    # Since pandas cannot directly read Excel colors
+    # from xls reliably on Streamlit Cloud,
+    # we approximate the same logic using:
+    #
+    # LOW EFFICIENCY = CONSTRAINT
+    # HIGH NWT = BEFORE CONSTRAINT
+
     filtered_df = df[
         (df["Eff"] <= 10) |
         (df["NWT"] >= 350)
+    ].copy()
+
+    # REMOVE EMPTY OPERATIONS
+    filtered_df = filtered_df[
+        filtered_df["Operation"].notna()
     ]
+
+    # KEEP ONLY IMPORTANT COLUMNS
+    required_cols = [
+        "Operation",
+        "Operator",
+        "SAM",
+        "Target",
+        "IDT",
+        "NWT",
+        "RWT",
+        "TDT",
+        "Eff"
+    ]
+
+    final_cols = [
+        c for c in required_cols
+        if c in filtered_df.columns
+    ]
+
+    filtered_df = filtered_df[final_cols]
 
     return filtered_df
