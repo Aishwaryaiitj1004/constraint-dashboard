@@ -1,23 +1,19 @@
 import pandas as pd
+import streamlit as st
 
 def process_excel(uploaded_file):
 
+    # Read Excel
     df = pd.read_excel(
         uploaded_file,
         sheet_name=0,
         header=4
     )
 
-    # Remove unwanted rows
-    df = df[df["Group"] != "Seq.No"]
+    # Clean column names
+    df.columns = df.columns.astype(str).str.strip()
 
-    # Convert KPI columns
-    kpi_cols = ["IDT", "NWT", "RWT", "TDT"]
-
-    for col in kpi_cols:
-        df[col] = pd.to_numeric(
-            df[col],
-            errors="coerce"
-        ).fillna(0)
+    # Show columns for debugging
+    st.write("Detected Columns:", df.columns.tolist())
 
     return df
